@@ -1,0 +1,6 @@
+Tool: built-in image_gen, background-extraction edit, transparent_background=true.
+Input: user-supplied Neon Bandaged Ghost Glitch.png.
+Output: frontend/public/ghostpatch-logo-transparent.png; also embedded in cyberpunk_front.html.
+
+Prompt:
+Use case: background-extraction. Edit target: the supplied Neon Bandaged Ghost Glitch PNG. Produce a clean transparent PNG cutout of THIS EXACT icon for a small website logo. Remove only the near-black backdrop outside/around the ghost and its neon glitch ring, and remove the large empty margins by tightly framing the complete icon. Preserve the ghost's exact tilted silhouette, expression, white sketch texture, purple bandage, magenta/cyan ring and glitch marks, colors and composition. Keep the eyes and mouth opaque black. Retain a modest soft neon glow with real semi-transparent alpha at the edges. Fully transparent background, no black or white rectangle, no checkerboard pattern, no new elements, no text, no redesign. The whole ring and glitch marks must remain within the frame.

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 300" fill="none" preserveAspectRatio="none">
+  <path d="M26 4H128L117 15H32L5 42V265L28 289H219L230 296H574L596 274V33L569 6H457L447 15H174" stroke="#e56cde" stroke-opacity=".75" stroke-width="1.4" vector-effect="non-scaling-stroke"/>
+  <path d="M25 24H290L301 33H440L452 21H562L579 40V276H350L339 282H42L31 272H15V57" stroke="#f1dfb6" stroke-opacity=".85" stroke-width="1.2" vector-effect="non-scaling-stroke"/>
+  <path d="M134 4H145L134 15H123ZM154 4H165L154 15H143M306 25H314L320 31H312ZM322 25H330L336 31H328ZM338 25H346L352 31H344ZM354 25H362L368 31H360ZM370 25H378L384 31H376Z" fill="#b871c0" fill-opacity=".7"/>
+  <path d="M475 26L483 34L475 42M491 26L499 34L491 42M507 26L515 34L507 42M523 26L531 34L523 42" stroke="#cc96d2" stroke-opacity=".7" stroke-width="1.2" vector-effect="non-scaling-stroke"/>
+  <path d="M38 13H100M20 64V97M20 104V114M20 121V131M20 138V148M20 155V165M505 282H556" stroke="#f0b7e6" stroke-opacity=".7" stroke-width="2" vector-effect="non-scaling-stroke"/>
+  <path d="M541 266H544M549 266H552M557 266H560M541 260H544M549 260H552M557 260H560M541 254H544M549 254H552M557 254H560" stroke="#e9c6e0" stroke-opacity=".7" stroke-width="2" vector-effect="non-scaling-stroke"/>
+  <circle cx="25" cy="24" r="2.5" fill="#f1dfb6"/><circle cx="15" cy="57" r="2" fill="#d892d2"/>
+</svg>

@@ -1,12 +1,15 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
 
-:root { color-scheme: dark; }
+@font-face { font-family: "Oxanium"; src: url("/fonts/Oxanium-Variable.ttf") format("truetype"); font-style: normal; font-weight: 200 800; font-display: swap; }
+@font-face { font-family: "Asap Condensed"; src: url("/fonts/AsapCondensed-SemiBold.ttf") format("truetype"); font-style: normal; font-weight: 600; font-display: swap; }
+
+:root { color-scheme: dark; --gp-font: "Oxanium", sans-serif; --gp-subheading: "Asap Condensed", sans-serif; }
 * { box-sizing: border-box; }
-body { margin: 0; background: #080808; color: #ededed; font: 16px/1.6 system-ui, sans-serif; }
+body { margin: 0; background: #080808; color: #ededed; font: 16px/1.6 var(--gp-font); }
 main { max-width: 1080px; margin: 0 auto; padding: 36px 20px 80px; }
-h1 { font-size: 2rem; font-weight: 750; margin: 0; }
-h2 { font-size: 1.25rem; font-weight: 650; margin-bottom: 16px; }
-h3 { font-weight: 650; margin: 16px 0 8px; }
+h1 { font-size: 2rem; font-weight: 750; margin: 0; text-shadow: 0 0 14px #ff68cd88, 0 0 32px #ab3ecb44; }
+h2 { font: 600 1.4rem/1.4 var(--gp-subheading); margin-bottom: 16px; text-shadow: 0 0 14px #ff68cd66; }
+h3 { font-family: var(--gp-subheading); font-weight: 600; margin: 16px 0 8px; text-shadow: 0 0 12px #ff68cd55; }
 p { margin: 8px 0; }
 section, .panel { border: 1px solid #353535; padding: 20px; margin-top: 24px; border-radius: 8px; }
 label { display: block; margin: 12px 0 6px; }

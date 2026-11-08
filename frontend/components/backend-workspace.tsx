@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { downloadPatch, post, request } from "@/lib/api";
 import type { Health, Job, Plan, RepositorySummary, TestRun } from "@/types/api";
 import type { Investigation } from "@/types/api";
 import HarnessEvidence from "@/components/harness-evidence";
-import { allowedSceneOrigin, isSceneChapter, SCENE_CHANNEL, WORKSPACE_STEPS } from "@/lib/scene-bridge";
+import { allowedSceneOrigin, isSceneChapter, SCENE_CHANNEL } from "@/lib/scene-bridge";
 import "./backend-workspace.css";
+import WorkspaceIcon from "./workspace-icon";
+import WorkspaceDetails, { WorkspaceInspector } from "./workspace-details";
+import GeneratedPlan from "./generated-plan";
+
+const PAGE_TITLES = ["Introduction", "Import your code", "Static analysis", "Modernization plan", "Execution & tests", "Review & export"] as const;
 
 function message(error: unknown): string {
   return error instanceof Error ? error.message : "Unexpected request failure.";
@@ -29,7 +34,7 @@ function ApprovalDialog({ approval, onCancel, onApprove }: {
     const previous = document.activeElement;
     dialog?.showModal();
     cancelRef.current?.focus();
-    return () => { dialog?.close(); if (previous instanceof HTMLElement) previous.focus(); };
+    return () => { dialog?.close(); if (previous instanceof HTMLElement) previous.focus({ preventScroll: true }); };
   }, []);
   return <dialog ref={ref} className="gp-approval-dialog" aria-labelledby="approval-title"
     onCancel={event => { event.preventDefault(); onCancel(); }}>
@@ -40,8 +45,8 @@ function ApprovalDialog({ approval, onCancel, onApprove }: {
   </dialog>;
 }
 
-function TestEvidence({ title, run }: { title: string; run: TestRun | null }) {
-  return <details open><summary>{title}: {run?.status ?? "not run"}</summary>
+function TestEvidence({ title, run, bubble = false }: { title: string; run: TestRun | null; bubble?: boolean }) {
+  return <WorkspaceDetails open className={bubble ? "gp-bubble gp-test-bubble" : undefined}><summary>{bubble && <WorkspaceIcon kind="tests" />}<span>{title}: {run?.status ?? "not run"}{bubble && run?.counts && <small className="gp-test-counts">{run.counts.passed} passed · {run.counts.failed} failed · {run.counts.skipped} skipped</small>}</span></summary>
     {!run ? <p className="muted">No execution evidence available.</p> : <>
       <p>Exit code: {run.exit_code ?? "unavailable"} ? Duration: {run.duration_ms} ms</p>
       <p>{run.counts ? run.counts.passed + " passed ? " + run.counts.failed + " failed ? " + run.counts.skipped + " skipped" : "Test counts unavailable; no pass is inferred."}</p>
@@ -49,11 +54,18 @@ function TestEvidence({ title, run }: { title: string; run: TestRun | null }) {
       {run.command.length > 0 && <pre>{run.command.join(" ")}</pre>}
       <pre aria-label={title + " output"}>{run.stdout || "No stdout captured."}{run.stderr ? "\nSTDERR\n" + run.stderr : ""}</pre>
     </>}
-  </details>;
+  </WorkspaceDetails>;
+}
+
+function CheckMessage({ title, value, tone, embedded }: { title: string; value: string; tone: "error" | "warning" | "success"; embedded: boolean }) {
+  if (!embedded) return <p className={tone} role={tone === "error" ? "alert" : undefined}>{value}</p>;
+  return <WorkspaceDetails className={"gp-check-message " + tone}><summary><span role={tone === "error" ? "alert" : undefined}>{title} — inspect details</span></summary><p className={tone}>{value}</p></WorkspaceDetails>;
 }
 
 export default function BackendWorkspace({ embedded = false }: { embedded?: boolean }) {
   const [chapter, setChapter] = useState(1);
+  const chapterRef = useRef(1);
+  const stageRef = useRef<HTMLDivElement>(null);
   const [approval, setApproval] = useState<PendingApproval | null>(null);
   const sceneOrigin = useRef<string | null>(null);
   const [health, setHealth] = useState<Health | null>(null);
@@ -76,7 +88,8 @@ export default function BackendWorkspace({ embedded = false }: { embedded?: bool
   const jobStatus = job?.status;
   const running = jobStatus === "queued" || jobStatus === "running";
   const reevaluating = investigation?.reevaluations?.some(item => item.status === "queued" || item.status === "running") ?? false;
-  const locked = busy !== null || running || reevaluating || approval !== null;
+  const evaluationRunning = investigation?.reevaluations?.some(item => item.status === "running") ?? false;
+  const locked = busy !== null || running || evaluationRunning || approval !== null;
   const repoId = repo?.id;
   const latestEvaluation = investigation?.reevaluations?.at(-1);
   const newerEvidence = !!(job?.completed_at && latestEvaluation?.completed_at && latestEvaluation.completed_at > job.completed_at);
@@ -91,9 +104,16 @@ export default function BackendWorkspace({ embedded = false }: { embedded?: bool
     } else if (step === 0) {
       window.location.assign("http://127.0.0.1:3001/cyberpunk_front.html");
     } else {
+      chapterRef.current = step;
       setChapter(step);
     }
   }
+
+  const inspectorChanged = useCallback((open: boolean) => {
+    if (sceneOrigin.current && window.parent !== window) {
+      window.parent.postMessage({ channel: SCENE_CHANNEL, type: "inspector", open }, sceneOrigin.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (!embedded || window.parent === window) return;
@@ -104,9 +124,20 @@ export default function BackendWorkspace({ embedded = false }: { embedded?: bool
     const send = (data: Record<string, unknown>) => window.parent.postMessage({ channel: SCENE_CHANNEL, ...data }, origin);
     function receive(event: MessageEvent) {
       if (event.source !== window.parent || event.origin !== origin || event.data?.channel !== SCENE_CHANNEL) return;
+      if (event.data.type === "viewport" && typeof event.data.width === "number" && Number.isFinite(event.data.width) && event.data.width >= 120 && event.data.width <= 10000) {
+        const width = event.data.width;
+        const style = document.documentElement.style;
+        style.setProperty("--gp-heading-size", Math.max(32, Math.min(56, width * .038)).toFixed(2) + "px");
+        style.setProperty("--gp-subheading-size", width < 700 ? "24px" : "28px");
+        style.setProperty("--gp-tertiary-size", width < 700 ? "21px" : "24px");
+        style.setProperty("--gp-description-size", width < 700 ? "14px" : "16px");
+      }
       if (event.data.type === "chapter" && isSceneChapter(event.data.chapter)) {
-        setApproval(null);
-        if (event.data.chapter > 0) setChapter(event.data.chapter);
+        if (event.data.chapter !== chapterRef.current) {
+          setApproval(null);
+          chapterRef.current = event.data.chapter;
+          setChapter(event.data.chapter);
+        }
       }
     }
     let pointerFrame = 0;
@@ -121,23 +152,36 @@ export default function BackendWorkspace({ embedded = false }: { embedded?: bool
       send({ type: "pointerleave" });
     }
     window.addEventListener("message", receive);
-    window.addEventListener("pointermove", move, { passive: true });
+    window.addEventListener("pointermove", move, { passive: true, capture: true });
+    window.addEventListener("pointerdown", move, { passive: true, capture: true });
     document.documentElement.addEventListener("pointerleave", leave);
-    window.addEventListener("blur", leave);
     send({ type: "ready" });
     return () => {
       sceneOrigin.current = null;
       if (pointerFrame) cancelAnimationFrame(pointerFrame);
       window.removeEventListener("message", receive);
-      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointermove", move, true);
+      window.removeEventListener("pointerdown", move, true);
       document.documentElement.removeEventListener("pointerleave", leave);
-      window.removeEventListener("blur", leave);
     };
   }, [embedded]);
 
   useEffect(() => {
-    if (embedded) window.scrollTo({ top: 0, behavior: "instant" });
+    if (embedded) {
+      window.scrollTo({ top: 0, behavior: "instant" });
+      stageRef.current?.scrollTo({ top: 0, behavior: "instant" });
+    }
   }, [chapter, embedded]);
+
+  useEffect(() => {
+    if (!embedded) return;
+    document.documentElement.classList.add("gp-embedded-document");
+    document.body.classList.add("gp-embedded-document");
+    return () => {
+      document.documentElement.classList.remove("gp-embedded-document");
+      document.body.classList.remove("gp-embedded-document");
+    };
+  }, [embedded]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -310,10 +354,18 @@ export default function BackendWorkspace({ embedded = false }: { embedded?: bool
     else void approveFuturePolicy(true);
   }
 
-  return <main className={embedded ? "gp-workspace" : undefined} data-workspace-step={embedded ? chapter : undefined}>
+  return <WorkspaceInspector enabled={embedded} scope={chapter} onOpenChange={inspectorChanged}><main className={embedded ? "gp-workspace" : undefined} data-workspace-step={embedded ? chapter : undefined}>
+    <div ref={embedded ? stageRef : undefined} className={embedded ? "gp-page-scroll" : undefined}>
     <header className={embedded ? "gp-heading" : undefined}>
       {embedded && <p className={"gp-eyebrow"}>GHOSTPATCH / LIVE BACKEND / DIAMOND {chapter + 1} OF 6</p>}
-      <h1>{embedded ? WORKSPACE_STEPS[chapter] : "GhostPatch"}</h1>
+      <h1>{embedded ? PAGE_TITLES[chapter] : "GhostPatch"}</h1>
+      {embedded && <p className="gp-page-description">{[
+        "", "Choose your repository and validate the Nemotron connection.",
+        "Map the codebase, review dependencies, and inspect source-backed findings.",
+        "Discover the rules, review the evidence, and approve a bounded change.",
+        "Follow actual agent activity and compare baseline and modified test evidence.",
+        "Inspect the exact patch, make your review decision, and export the result.",
+      ][chapter]}</p>}
       {!embedded && <p>Modernize legacy Python. Review the plan, exact changes, and actual validation evidence.</p>}
       {!embedded && <p><a className="scene-link" href="/cyberpunk">Open cyberpunk workflow</a></p>}
       {embedded && <p className={"gp-repository"}>{repo ? "Repository: " + repo.name : "No repository selected"}{job ? " | Job: " + job.status : ""}</p>}
@@ -321,97 +373,103 @@ export default function BackendWorkspace({ embedded = false }: { embedded?: bool
     <div className="notice" hidden={embedded && chapter !== 1}><strong>Local MVP — real backend</strong><p>Uploads and GitHub imports receive static analysis only. Only the built-in developer-controlled sample may execute in Docker. No mock results are displayed.</p></div>
     <div aria-live="polite" className={embedded ? "gp-status" : undefined}>
       {health && <p className="muted">Backend connected ? NVIDIA {health.nvidia_configured ? "configured" : "not configured"} ? Docker {health.docker.available ? "ready" : health.docker.reason}</p>}
-      {healthError && <p className="error">{healthError}</p>}
+      {healthError && <CheckMessage title="Backend connection error" value={healthError} tone="error" embedded={embedded} />}
       {busy && <p role="status">{busy}</p>}
-      {reevaluating && <p role="status">Bounded re-evaluation is running. No code edits are authorized by drift alone.</p>}
-      {error && <p role="alert" className="error">{error}</p>}
-      {pollError && <p className="warning" role="alert">{pollError}</p>}
-      {connection && <p className="success">{connection}</p>}
+      {reevaluating && <p role="status">Bounded re-evaluation is queued or running. No code edits are authorized by drift alone.</p>}
+      {error && <CheckMessage title="Request failed" value={error} tone="error" embedded={embedded} />}
+      {pollError && <CheckMessage title="Progress connection warning" value={pollError} tone="warning" embedded={embedded} />}
+      {connection && <CheckMessage title="Nemotron validation result" value={connection} tone="success" embedded={embedded} />}
     </div>
 
-    <div className={embedded && chapter === 1 ? "gp-import-layout" : undefined}>
-    <section hidden={!show(1)} aria-labelledby="import-title"><h2 id="import-title">1. Import and analyze</h2>
+    <div className={embedded ? "gp-stage-layout gp-stage-" + chapter : undefined}>
+    <section hidden={!show(1)} className={embedded ? "gp-bubble gp-import-bubble" : undefined} aria-labelledby="import-title"><h2 id="import-title">Choose a repository</h2>
       <div className={embedded ? "columns " + "gp-import-columns" : "columns"}><div>
         <label htmlFor="zip">Repository ZIP ? maximum 20 MiB</label>
         <input id="zip" type="file" accept=".zip" disabled={locked} onChange={e => { setFile(e.target.files?.[0] ?? null); setError(""); }} />
         {file && <p className="muted">Selected: {file.name}</p>}
-        <div className="row"><button disabled={locked || !file} onClick={() => void load("zip")}>Analyze ZIP</button></div>
+        <div className="row"><button disabled={locked || !file} onClick={() => void load("zip")}>Upload ZIP and analyze</button></div>
       </div><div>
         <label htmlFor="git">Public GitHub repository URL</label>
         <input id="git" type="url" placeholder="https://github.com/owner/repository" value={gitUrl} disabled={locked} onChange={e => setGitUrl(e.target.value)} />
-        <div className="row"><button disabled={locked || !gitUrl.trim()} onClick={() => void load("git")}>Analyze GitHub</button></div>
+        <div className="row"><button disabled={locked || !gitUrl.trim()} onClick={() => void load("git")}>Import GitHub and analyze</button></div>
       </div></div>
       <p className="muted">Public HTTPS GitHub URLs only. Small UTF-8 Python repositories; no credentials, submodules, nested archives, or dependency installation.</p>
-      <div className="row"><button className="secondary" disabled={locked} onClick={() => void load("sample")}>Load trusted sample</button><span className="muted">Synthetic expense reports ? 12 tests ? 5 behavior cases</span></div>
-      <div className="row"><button className="secondary" disabled={locked} onClick={() => void load("claims")}>Load claims policy demo</button><span className="muted">Fictional eligibility | Independent policy | Synthetic usage signals</span></div>
+      <div className="row"><button className="secondary" disabled={locked} onClick={() => void load("sample")}>Try expense-report sample</button><span className="muted">Synthetic expense reports ? 12 tests ? 5 behavior cases</span></div>
+      <div className="row"><button className="secondary" disabled={locked} onClick={() => void load("claims")}>Try claims-policy demo</button><span className="muted">Fictional eligibility | Independent policy | Synthetic usage signals</span></div>
       {repo && <p className="success">Analyzed {repo.name}. Continue to Static analysis to review the findings.</p>}
     </section>
 
-    <section hidden={embedded && chapter !== 1 && chapter !== 3} aria-labelledby="model-title"><h2 id="model-title">Nemotron connection validation</h2>
+    <section hidden={embedded && chapter !== 1 && chapter !== 3} className={embedded ? "gp-bubble gp-model-bubble" : undefined} aria-labelledby="model-title"><h2 id="model-title">Nemotron connection validation</h2>
       <label className="check"><input type="checkbox" checked={consent} disabled={locked} onChange={e => setConsent(e.target.checked)} /><span>I allow relevant source excerpts and validation failures to be sent to the configured NVIDIA hosted model for planning, patching, and up to two repairs. Common secret patterns are redacted, but redaction is not a confidentiality guarantee.</span></label>
-      <button className="secondary" disabled={locked || !consent} onClick={() => void checkModel()}>Test NVIDIA connection</button>
+      <button className="secondary" disabled={locked || !consent} onClick={() => void checkModel()}>Check Nemotron connection</button>
       <p className="muted">This makes a real Nemotron final-response check. It does not generate a plan, edit code, or run Docker tests.</p>
     </section>
 
-    {repo && <section hidden={!show(2)} aria-labelledby="analysis-title"><h2 id="analysis-title">2. Static analysis ? {repo.name}</h2>
+    {repo && <section hidden={!show(2)} className={embedded ? "gp-analysis-stage" : undefined} aria-labelledby="analysis-title"><h2 id="analysis-title">Analysis summary · {repo.name}</h2>
       <p>{repo.file_count} retained files ? {repo.analysis.python_file_count} Python files ? {repo.analysis.findings.length} heuristic findings</p>
       <p className={repo.trusted ? "success" : "warning"}>{repo.execution_policy}</p>
       <p className="muted">Static findings are review suggestions, not verified vulnerabilities or a security score.</p>
       {repo.analysis.warnings.map((warning, i) => <p key={i} className="warning">{warning}</p>)}
+      <WorkspaceDetails id="gp-findings" open={!embedded} className={embedded ? "gp-bubble gp-detail-bubble" : undefined}><summary>{embedded && <WorkspaceIcon kind="rules" />}<span><strong>Findings and source evidence</strong>{embedded && <small>{repo.analysis.findings.length} heuristic findings to review</small>}</span></summary>
       {repo.analysis.findings.length ? <ul>{repo.analysis.findings.map(finding => <li key={finding.id}>
         <strong>{finding.severity.toUpperCase()}</strong> ? <code>{finding.file_path}{finding.line ? ":" + finding.line : ""}</code> ? {finding.explanation}
-        <details><summary>Evidence and recommendation</summary><pre>{finding.evidence}</pre><p>{finding.recommendation}</p></details>
+        <WorkspaceDetails><summary>Evidence and recommendation</summary><pre>{finding.evidence}</pre><p>{finding.recommendation}</p></WorkspaceDetails>
       </li>)}</ul> : <p>No findings from the available checks. This does not establish correctness or security.</p>}
-      <details><summary>Files and local dependencies</summary><pre>{repo.analysis.files.join("\n")}</pre><pre>{repo.analysis.local_dependencies.map(edge => edge.source + " imports " + edge.target).join("\n") || "No local import edges found."}</pre></details>
+      </WorkspaceDetails>
+      <div className={embedded ? "gp-two-bubbles" : undefined}>
+      <WorkspaceDetails id="gp-files" className={embedded ? "gp-bubble gp-detail-bubble" : undefined}><summary>{embedded && <WorkspaceIcon kind="code" />}<span><strong>Source files</strong>{embedded && <small>{repo.analysis.python_file_count} Python files ? {repo.file_count} retained files</small>}</span></summary><pre>{repo.analysis.files.join("\n")}</pre></WorkspaceDetails>
+      <WorkspaceDetails id="gp-dependencies" className={embedded ? "gp-bubble gp-detail-bubble" : undefined}><summary>{embedded && <WorkspaceIcon kind="links" />}<span><strong>Local dependencies</strong>{embedded && <small>{repo.analysis.local_dependencies.length} local connections</small>}</span></summary><pre>{repo.analysis.local_dependencies.map(edge => edge.source + " imports " + edge.target).join("\n") || "No local import edges found."}</pre></WorkspaceDetails>
+      </div>
     </section>}
 
-    <section hidden={!show(3)} aria-labelledby="plan-title"><h2 id="plan-title">3. Nemotron plan and approval</h2>
+    <section hidden={!show(3)} className={embedded ? "gp-plan-stage" : undefined} aria-labelledby="plan-title"><h2 id="plan-title">Prepare a modernization plan</h2>
       {repo && <div className="panel"><h3>Ghost Memory / Ghost Signals / Ghost Trials</h3>
         <p className="muted">Investigate before planning. Synthetic metrics propose hypotheses; only independently grounded trials can establish a policy mismatch.</p>
-        <button className="secondary" disabled={locked || !consent || !!job} onClick={() => void investigate()}>Investigate rules, signals &amp; trials</button>
+        <p id="investigation-help" className="gp-action-help">Find candidate business rules, inspect available synthetic usage, and compare behavior. Trusted demos run baseline checks in Docker; imported code is never executed.</p>
+        <button className="secondary" aria-describedby="investigation-help" disabled={locked || !consent || !!job} onClick={() => void investigate()}>Discover rules and check behavior</button>
         {repo.sample_id === "claims_demo" && <><div className="row">
-          <button className="secondary" disabled={locked} onClick={() => void importWindow("before")}>Import synthetic before window</button>
-          <button className="secondary" disabled={locked} onClick={() => void importWindow("after")}>Import synthetic after window</button>
-          <button className="secondary" disabled={locked || investigation?.rulebook.policy_version === "1.1"} onClick={() => void approveFuturePolicy()}>Approve fictional policy 1.1</button>
+          <button className="secondary" disabled={locked} onClick={() => void importWindow("before")}>Load earlier demo usage</button>
+          <button className="secondary" disabled={locked} onClick={() => void importWindow("after")}>Load later demo usage</button>
+          <button className="secondary" disabled={locked || investigation?.rulebook.policy_version === "1.1"} onClick={() => void approveFuturePolicy()}>Review demo policy 1.1</button>
         </div><p className="muted">Optional stable identities enable declared-cohort return metrics. These synthetic version labels are not real-user tracking or measured patch impact.</p></>}
-        <HarnessEvidence investigation={investigation} report={newerEvidence ? investigation?.report ?? null : job?.results.behavior_report ?? null} intended={intendedChanges}
+        <HarnessEvidence bubbleLayout={embedded} investigation={investigation} report={newerEvidence ? investigation?.report ?? null : job?.results.behavior_report ?? null} intended={intendedChanges}
           disabled={locked || (!!job && !followupReady)} canProposeChange={!job || !!followupReady} onSelect={ids => { setIntendedChanges(ids); setPlan(null); }} />
       </div>}
       <label htmlFor="objective">Modernization objective</label>
       <textarea id="objective" value={objective} disabled={locked || (!!job && !followupReady)} maxLength={1000} onChange={e => { setObjective(e.target.value); setPlan(null); }} />
-      <div className="row"><button disabled={locked || !repo || !consent || objective.length < 10 || (!!job && !followupReady)} onClick={() => void generatePlan()}>Generate plan</button></div>
+      <p id="generate-plan-help" className="gp-action-help">Describe the change you want, then generate a proposal. This sends relevant code to Nemotron with your consent; it does not edit any files.</p>
+      <div className="row"><button aria-describedby="generate-plan-help" disabled={locked || !repo || !consent || objective.length < 10 || (!!job && !followupReady)} onClick={() => void generatePlan()}>Generate modernization plan</button></div>
       {followupReady && <p className="warning">New independent evidence requires review. Select the specific policy correction and generate a fresh follow-up plan; no automatic repair has run.</p>}
       {job && !plan && <p className="muted">Viewing a saved job. Its original plan is retained on the backend; load a fresh repository to generate another plan.</p>}
       {!repo && <p className="muted">Analyze a repository or load the trusted sample first.</p>}
-      {plan && <div className="panel"><h3>{plan.proposal.objective}</h3>
-        {(plan.intended_rule_changes ?? []).length > 0 && <p className="warning">Intended business-rule changes requiring explicit approval: {plan.intended_rule_changes.join(", ")}</p>}
-        <ul>{plan.proposal.changes.map(change => <li key={change.path}><strong>{change.priority}</strong> ? <code>{change.path}</code><p>{change.description}</p></li>)}</ul>
-        <h3>Risks</h3><ul>{plan.proposal.risks.map((risk, i) => <li key={i}>{risk}</li>)}</ul>
-        <h3>Validation strategy</h3><ul>{plan.proposal.test_strategy.map((test, i) => <li key={i}>{test}</li>)}</ul>
-        {!repo?.trusted && <p className="warning">Code execution is prohibited for this source. Any exported patch will be unverified.</p>}
-        <button disabled={locked || !consent || (!!job && !followupReady)} onClick={() => void execute()}>Approve &amp; execute</button>
-      </div>}
+      {plan && <GeneratedPlan plan={plan} embedded={embedded} active={chapter === 3} trusted={repo?.trusted ?? false}
+        disabled={locked || !consent || (!!job && !followupReady)} onApprove={() => void execute()} />}
+
     </section>
 
-    {job && <section hidden={!show(4)} aria-labelledby="execution-title"><h2 id="execution-title">4. Execution ? {job.status}</h2>
+    {job && <section hidden={!show(4)} className={embedded ? "gp-execution-stage" : undefined} aria-labelledby="execution-title"><h2 id="execution-title">Job progress · {job.status}</h2>
       <p>Job <code>{job.id}</code> ? Verification: <strong>{job.results.verification}</strong></p>
       {running && <p role="status">Work is running on the backend. This page polls for actual progress; leaving it does not cancel the job.</p>}
-      {job.error && <p className="error">{job.error}</p>}
-      <ol>{job.events.map(event => <li key={event.id}><small>{new Date(event.timestamp).toLocaleTimeString()} ? {event.phase} ? {event.status}</small><p>{event.message}</p></li>)}</ol>
-      <div className="columns"><TestEvidence title="Baseline tests" run={job.results.baseline} /><TestEvidence title="Modified tests" run={job.results.modified} /></div>
-      {job.results.repairs.length > 0 && <TestEvidence title="Initial modified tests before repair" run={job.results.initial_modified} />}
-      {job.results.repairs.map(repair => <details key={repair.attempt}><summary>Repair {repair.attempt} of 2</summary><p>{repair.summary}</p>{repair.error && <p className="error">{repair.error}</p>}<TestEvidence title={"Repair " + repair.attempt + " validation"} run={repair.validation} /></details>)}
-      {job.results.behavior_comparison.length > 0 && <><h3>Observed behavior comparisons</h3><ul>{job.results.behavior_comparison.map(item => <li key={item.case_id}><details><summary>{item.case_id}: {item.status}</summary><pre>{JSON.stringify({ baseline: item.baseline, modified: item.modified }, null, 2)}</pre></details></li>)}</ul></>}
+      {job.error && <CheckMessage title="Execution error" value={job.error} tone="error" embedded={embedded} />}
+      <WorkspaceDetails open className={embedded ? "gp-bubble gp-detail-bubble" : undefined}><summary>{embedded && <WorkspaceIcon kind="code" />}<span>Nemotron activity and terminal events</span></summary>
+      <ol>{job.events.map(event => <li key={event.id}><small>{new Date(event.timestamp).toLocaleTimeString()} · {event.phase} · {event.status}</small><p>{event.message}</p></li>)}</ol>
+      </WorkspaceDetails>
+      <div className={embedded ? "gp-validation-stack" : "columns"}><TestEvidence bubble={embedded} title="Baseline tests" run={job.results.baseline} /><TestEvidence bubble={embedded} title="Modified tests" run={job.results.modified} /></div>
+      {job.results.repairs.length > 0 && <TestEvidence bubble={embedded} title="Initial modified tests before repair" run={job.results.initial_modified} />}
+      {job.results.repairs.map(repair => <WorkspaceDetails key={repair.attempt}><summary>Repair {repair.attempt} of 2</summary><p>{repair.summary}</p>{repair.error && <p className="error">{repair.error}</p>}<TestEvidence bubble={embedded} title={"Repair " + repair.attempt + " validation"} run={repair.validation} /></WorkspaceDetails>)}
+      {job.results.behavior_comparison.length > 0 && <><h3>Observed behavior comparisons</h3><ul>{job.results.behavior_comparison.map(item => <li key={item.case_id}><WorkspaceDetails><summary>{item.case_id}: {item.status}</summary><pre>{JSON.stringify({ baseline: item.baseline, modified: item.modified }, null, 2)}</pre></WorkspaceDetails></li>)}</ul></>}
       {job.results.warnings.map((warning, i) => <p key={i} className="warning">{warning}</p>)}
     </section>}
 
-    {job && !running && <section hidden={!show(5)} aria-labelledby="result-title"><h2 id="result-title">5. Review and export</h2>
-      {job.results.diffs.length ? job.results.diffs.map(diff => <details key={diff.path} open><summary>{diff.path}</summary><pre aria-label={"Unified diff for " + diff.path}>{diff.unified_diff}</pre></details>) : <p>No patch was produced.</p>}
+    {job && !running && <section hidden={!show(5)} className={embedded ? "gp-results-stage" : undefined} aria-labelledby="result-title"><h2 id="result-title">Review the patch</h2>
+      {job.results.diffs.length ? job.results.diffs.map(diff => <WorkspaceDetails className={embedded ? "gp-bubble gp-detail-bubble" : undefined} key={diff.path} open><summary>{embedded && <WorkspaceIcon kind="code" />}<span>{diff.path}</span></summary><pre aria-label={"Unified diff for " + diff.path}>{diff.unified_diff}</pre></WorkspaceDetails>) : <p>No patch was produced.</p>}
+      <div className={embedded ? "gp-bubble gp-review-bubble" : undefined}>
       <p className="muted">Review is session-only. Approving enables download; it does not merge or deploy. Rejecting leaves the isolated evidence available and disables export.</p>
       <p>Review decision: <strong>{review}</strong></p>
-      <div className="row"><button className="secondary" disabled={locked || !job.results.diffs.length} onClick={() => setReview("rejected")}>Reject patch</button>
-        <button disabled={locked || !job.results.diffs.length} onClick={() => setReview("approved")}>Approve patch</button>
+      <div className="row"><button className="secondary" disabled={locked || !job.results.diffs.length} onClick={() => setReview("rejected")}>Reject this patch</button>
+        <button disabled={locked || !job.results.diffs.length} onClick={() => setReview("approved")}>Approve for download</button>
         <button disabled={locked || review !== "approved" || !job.results.diffs.length} onClick={() => void exportPatch()}>Download patch</button>
+      </div>
       </div>
       <p className="muted">To start over, analyze a new import or load a fresh trusted sample above. Local IDs expire on service restart or workspace cleanup.</p>
     </section>}
@@ -419,11 +477,13 @@ export default function BackendWorkspace({ embedded = false }: { embedded?: bool
     {embedded && chapter === 2 && !repo && <div className={"gp-empty"}><p>Import a repository or load a trusted sample to see real analysis findings.</p><button onClick={() => navigate(1)}>Go to import</button></div>}
     {embedded && chapter === 4 && !job && <div className={"gp-empty"}><p>No execution has started. Generate a plan and explicitly approve it first.</p><button onClick={() => navigate(3)}>Go to plan and approval</button></div>}
     {embedded && chapter === 5 && (!job || running) && <div className={"gp-empty"}><p>{running ? "The backend job is still running. Review and export appear after it finishes." : "No results yet. Complete an approved execution to inspect its actual diff and test evidence."}</p><button onClick={() => navigate(job ? 4 : 3)}>{job ? "View execution" : "Go to plan and approval"}</button></div>}
+    </div>
     {embedded && <nav className={"gp-navigation"} aria-label="Backend workflow steps">
       <button className="secondary" onClick={() => navigate(chapter - 1)}>{chapter === 1 ? "Back to intro" : "Previous"}</button>
-      <span>Diamond {chapter + 1} / 6 · Repository and job state stay available between pages.</span>
-      <button disabled={chapter < 5 && nextDisabled} onClick={() => navigate(chapter === 5 ? 1 : chapter + 1)}>{chapter === 5 ? "Back to import" : "Next: " + WORKSPACE_STEPS[chapter + 1]}</button>
+      <span id="gp-next-help">{nextDisabled ? chapter <= 2 ? "Import a repository to continue." : chapter === 3 ? "Review and approve a plan before execution." : running ? "Wait for the backend job to finish." : "Approve a plan to start a job." : "Step " + (chapter + 1) + " of 6"}</span>
+      {chapter === 3 && plan && <button className="secondary" data-detail-target="gp-generated-plan" onClick={() => document.getElementById("gp-generated-plan")?.querySelector<HTMLButtonElement>("[data-detail-open]")?.click()}>Read generated plan</button>}
+      <button aria-describedby="gp-next-help" disabled={chapter < 5 && nextDisabled} onClick={() => navigate(chapter === 5 ? 1 : chapter + 1)}>{chapter === 5 ? "Back to import" : "Next: " + PAGE_TITLES[chapter + 1]}</button>
     </nav>}
     {approval && <ApprovalDialog approval={approval} onCancel={() => setApproval(null)} onApprove={confirmApproval} />}
-  </main>;
+  </main></WorkspaceInspector>;
 }
