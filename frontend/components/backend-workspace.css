@@ -1,0 +1,34 @@
+.gp-workspace {
+  min-height: 100vh;
+  max-width: none;
+  padding: 22px 26px 28px;
+  font-size: 14px;
+  background: #08080d;
+  color: #f5f5f7;
+}
+.gp-workspace [hidden] { display: none !important; }
+html:has(.gp-workspace) { overscroll-behavior-y: contain; }
+.scene-link { color: #edb5e0; text-decoration: underline; text-underline-offset: 4px; }
+.gp-approval-dialog { color: #f5f5f7; background: #15151f; border: 1px solid #bb84b9; border-radius: 10px; padding: 26px; width: min(560px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto; margin: auto; line-height: 1.7; }
+.gp-approval-dialog::backdrop { background: #08080dbd; }
+.gp-workspace h1 { font-size: clamp(21px, 3vw, 30px); }
+.gp-workspace h2 { font-size: 18px; margin-top: 0; }
+.gp-workspace section { margin-top: 16px; background: #15151f; border-color: #494052; }
+.gp-workspace button { font-size: 13px; }
+.gp-workspace input, .gp-workspace textarea { font-size: 14px; }
+.gp-workspace pre { max-height: 360px; }
+.gp-heading { border-bottom: 1px solid #49334b; padding-bottom: 12px; }
+.gp-eyebrow { color: #f7a4d1; font-size: 10px; letter-spacing: .16em; }
+.gp-repository { color: #c4bbcc; font-size: 12px; overflow-wrap: anywhere; }
+.gp-status { font-size: 12px; }
+.gp-import-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.gp-import-layout section { min-width: 0; }
+.gp-import-columns { grid-template-columns: 1fr; gap: 6px; }
+.gp-navigation { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; border-top: 1px solid #49334b; margin-top: 22px; padding-top: 18px; }
+.gp-navigation span { color: #bfb0c7; font-size: 12px; }
+.gp-empty { border: 1px dashed #756078; padding: 24px; margin-top: 18px; border-radius: 8px; }
+@media (max-width: 760px) {
+  .gp-workspace { padding: 18px 14px 24px; font-size: 13px; }
+  .gp-import-layout { grid-template-columns: 1fr; gap: 0; }
+  .gp-navigation span { flex-basis: 100%; order: -1; }
+}

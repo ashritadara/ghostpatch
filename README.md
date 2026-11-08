@@ -2,7 +2,7 @@
 
 GhostPatch statically analyzes legacy Python repositories, asks a configured NVIDIA Nemotron model for one bounded modernization, patches an isolated working copy, and exports exact diffs. Only the pinned, developer-controlled samples may execute in restricted Docker containers. Uploaded/cloned repositories never execute.
 
-This is a local, single-user MVP. The minimal black-page frontend calls the real FastAPI backend; it has no mock outputs, animations, graph UI, or Monaco. GHOSTPATCH_MVP_CODEX.md supersedes the previous master plan's approval gates and frontend-first sequence.
+This is a local, single-user MVP. The basic black-page frontend calls the real FastAPI backend with actual evidence. The optional cyberpunk scene shares that interface across its diamond pages. Neither interface fabricates model output or execution results. GHOSTPATCH_MVP_CODEX.md supersedes the previous master plan's approval gates and frontend-first sequence.
 
 
 ## Backend upgrade: Ghost Memory, Ghost Trials, Ghost Signals
@@ -75,6 +75,11 @@ The image build installs vetted runner dependencies. Runtime containers never in
     npm.cmd run dev -- --hostname 127.0.0.1
 
 Open http://127.0.0.1:3000. The public backend origin defaults to http://127.0.0.1:8000. To change it, use an ignored frontend/.env.local based on .env.example, then restart development or rebuild production. Public variables must never contain secrets.
+
+The integrated cyberpunk frontend is available at **http://127.0.0.1:3000/cyberpunk**.
+Diamonds 2–6 reuse the real backend UI for import/Nemotron connection validation,
+analysis, plan/evidence, execution/tests, and review/export. The basic page remains
+available. See [workflow, navigation and session limits](docs/CYBERPUNK_WORKFLOW.md).
 
 Use npm.cmd on PowerShell to avoid npm.ps1 script-policy errors. On other platforms, npm works. The UI uses system fonts and does not require Google Fonts downloads.
 
