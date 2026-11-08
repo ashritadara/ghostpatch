@@ -1,0 +1,50 @@
+# Local environment and credentials; examples contain placeholders only.
+.env*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account*.json
+.aws/
+.ssh/
+
+# JavaScript dependencies and generated output.
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.vercel/
+
+# Python environments, caches, and package output.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+
+# Imported code and per-job runtime evidence are never source artifacts.
+uploads/
+workspaces/
+working_copies/
+artifacts/
+.ghostpatch/
+
+# Operating-system files.
+.DS_Store
+Thumbs.db

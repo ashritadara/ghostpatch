@@ -1,0 +1,12 @@
+{
+  "behavior_cases.json": "f06f2ff931106d57bc0ba420049a83164a3efede19dbf0bdc9167f05441431e1",
+  "claims.py": "cd70b61bd5e80b7bbcadcaa22a33e4794b06773f3ff85700db1af35d4211deae",
+  "policy_v1_1.json": "515e6d329e00e70dcc2b801f209f66e857ee12e0a92a509013cd75fff1817b3c",
+  "policy.json": "4e5959fd20290d04f99370b6d20ad18cba5f2038461845a5d212caf97ae876e9",
+  "POLICY.md": "a64d8a1cab89a8956d69ddfee78d83a4bf6b81843a7dea870deab78b3b1a70e4",
+  "README.md": "8cac12d73c3d0f702640038736f8f055bd48f7efd9215eb71a70d41b509f378a",
+  "signals_after.jsonl": "5b205b973c13b546b990902d83391dafbbf7ae598e7923ac916148aed159edbb",
+  "signals_before.jsonl": "555a32311c853630e6273bb4730c325e8dee807fb5c98b669e2c416a7648f821",
+  "signals_windows.json": "a41be1fd0c6791c55df86ad16b4fde5427c4385fd16586aba2defc86dea623c1",
+  "tests/test_claims.py": "c440f5ab612e497b7e999615d4f536aba11fcc9bcf10ef55481a5c9cdc167965"
+}

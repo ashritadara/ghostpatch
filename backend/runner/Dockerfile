@@ -1,0 +1,5 @@
+FROM python:3.12-slim
+RUN python -m pip install --no-cache-dir pytest==8.4.2
+USER 65534:65534
+WORKDIR /project
+ENV PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1

@@ -1,0 +1,227 @@
+{
+  "version": "1.0",
+  "synthetic": true,
+  "rules": [
+    {
+      "id": "rule-age-eligibility",
+      "title": "Inclusive age eligibility",
+      "description": "Age 65 or older is eligible.",
+      "line": 3,
+      "expected_predicate": "age >= 65"
+    },
+    {
+      "id": "rule-duplicates",
+      "title": "Duplicate rejection",
+      "description": "Duplicate submissions are rejected with zero payable amount.",
+      "line": 4
+    },
+    {
+      "id": "rule-rounding",
+      "title": "Decimal half-up rounding",
+      "description": "Use Decimal ROUND_HALF_UP to two places.",
+      "line": 5
+    },
+    {
+      "id": "rule-review",
+      "title": "Review threshold",
+      "description": "Amounts greater than 500 require review; 500 is approved.",
+      "line": 6
+    },
+    {
+      "id": "rule-invalid-input",
+      "title": "Invalid input errors",
+      "description": "Invalid ages or amounts raise ValueError.",
+      "line": 7
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "trial-normal-older",
+      "title": "normal-older",
+      "category": "normal",
+      "rule_ids": [
+        "rule-age-eligibility"
+      ],
+      "input": {
+        "age": 70,
+        "amount": "10"
+      },
+      "expected": {
+        "output": {
+          "decision": "approved",
+          "reason": "eligible",
+          "payable": "10.00"
+        },
+        "exception_type": null
+      },
+      "rationale": "Independent fictional developer-approved policy fixture."
+    },
+    {
+      "id": "trial-boundary-age-65",
+      "title": "boundary-age-65",
+      "category": "boundary",
+      "rule_ids": [
+        "rule-age-eligibility"
+      ],
+      "input": {
+        "age": 65,
+        "amount": "10"
+      },
+      "expected": {
+        "output": {
+          "decision": "approved",
+          "reason": "eligible",
+          "payable": "10.00"
+        },
+        "exception_type": null
+      },
+      "rationale": "Independent fictional developer-approved policy fixture."
+    },
+    {
+      "id": "trial-below-age-65",
+      "title": "below-age-65",
+      "category": "edge",
+      "rule_ids": [
+        "rule-age-eligibility"
+      ],
+      "input": {
+        "age": 64,
+        "amount": "10"
+      },
+      "expected": {
+        "output": {
+          "decision": "rejected",
+          "reason": "age_threshold",
+          "payable": "0.00"
+        },
+        "exception_type": null
+      },
+      "rationale": "Independent fictional developer-approved policy fixture."
+    },
+    {
+      "id": "trial-negative-age",
+      "title": "negative-age",
+      "category": "negative",
+      "rule_ids": [
+        "rule-invalid-input"
+      ],
+      "input": {
+        "age": -1,
+        "amount": "10"
+      },
+      "expected": {
+        "output": null,
+        "exception_type": "ValueError"
+      },
+      "rationale": "Independent fictional developer-approved policy fixture."
+    },
+    {
+      "id": "trial-duplicate",
+      "title": "duplicate",
+      "category": "duplicate",
+      "rule_ids": [
+        "rule-duplicates"
+      ],
+      "input": {
+        "age": 65,
+        "amount": "10",
+        "duplicate": true
+      },
+      "expected": {
+        "output": {
+          "decision": "rejected",
+          "reason": "duplicate",
+          "payable": "0.00"
+        },
+        "exception_type": null
+      },
+      "rationale": "Independent fictional developer-approved policy fixture."
+    },
+    {
+      "id": "trial-round-half-up",
+      "title": "round-half-up",
+      "category": "regression",
+      "rule_ids": [
+        "rule-rounding"
+      ],
+      "input": {
+        "age": 70,
+        "amount": "2.345"
+      },
+      "expected": {
+        "output": {
+          "decision": "approved",
+          "reason": "eligible",
+          "payable": "2.35"
+        },
+        "exception_type": null
+      },
+      "rationale": "Independent fictional developer-approved policy fixture."
+    },
+    {
+      "id": "trial-review-at-500",
+      "title": "review-at-500",
+      "category": "boundary",
+      "rule_ids": [
+        "rule-review"
+      ],
+      "input": {
+        "age": 70,
+        "amount": "500"
+      },
+      "expected": {
+        "output": {
+          "decision": "approved",
+          "reason": "eligible",
+          "payable": "500.00"
+        },
+        "exception_type": null
+      },
+      "rationale": "Independent fictional developer-approved policy fixture."
+    },
+    {
+      "id": "trial-review-above-500",
+      "title": "review-above-500",
+      "category": "boundary",
+      "rule_ids": [
+        "rule-review"
+      ],
+      "input": {
+        "age": 70,
+        "amount": "500.01"
+      },
+      "expected": {
+        "output": {
+          "decision": "review",
+          "reason": "eligible",
+          "payable": "500.01"
+        },
+        "exception_type": null
+      },
+      "rationale": "Independent fictional developer-approved policy fixture."
+    },
+    {
+      "id": "trial-negative-amount",
+      "title": "negative-amount",
+      "category": "negative",
+      "rule_ids": [
+        "rule-invalid-input"
+      ],
+      "input": {
+        "age": 70,
+        "amount": "-1"
+      },
+      "expected": {
+        "output": null,
+        "exception_type": "ValueError"
+      },
+      "rationale": "Independent fictional developer-approved policy fixture."
+    }
+  ],
+  "parameters": {
+    "minimum_age": 65,
+    "review_above": "500",
+    "quantum": "0.01",
+    "rounding": "ROUND_HALF_UP"
+  }
+}

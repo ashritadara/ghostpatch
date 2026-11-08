@@ -1,0 +1,2 @@
+# Keep hash-pinned sample fixtures reproducible on Windows and other platforms.
+* text=auto eol=lf

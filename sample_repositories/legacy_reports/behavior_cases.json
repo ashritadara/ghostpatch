@@ -1,0 +1,7 @@
+[
+  {"id":"empty","rows":[]},
+  {"id":"decimal","rows":[{"department":"A","amount":"0.10"},{"department":"A","amount":"0.20"}]},
+  {"id":"ordering","rows":[{"department":"Z","amount":"2"},{"department":"A","amount":"1"}]},
+  {"id":"adjustment","rows":[{"department":"A","amount":"5"},{"department":"A","amount":"-2.25"}]},
+  {"id":"rounding","rows":[{"department":"A","amount":"2.345"}]}
+]

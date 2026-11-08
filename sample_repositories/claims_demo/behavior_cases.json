@@ -1,0 +1,6 @@
+[
+  {"id":"older","input":{"age":70,"amount":"10"}},
+  {"id":"younger","input":{"age":60,"amount":"10"}},
+  {"id":"duplicate","input":{"age":70,"amount":"10","duplicate":true}},
+  {"id":"rounding","input":{"age":70,"amount":"2.345"}}
+]

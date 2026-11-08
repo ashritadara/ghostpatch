@@ -1,0 +1,1 @@
+"""GhostPatch local MVP backend."""
