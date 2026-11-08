@@ -1,15 +1,15 @@
 @import "tailwindcss" source(none);
 
+@font-face { font-family: "Cyberform"; src: url("/fonts/CyberformDemo.otf") format("opentype"); font-style: normal; font-weight: 400; font-display: swap; }
 @font-face { font-family: "Oxanium"; src: url("/fonts/Oxanium-Variable.ttf") format("truetype"); font-style: normal; font-weight: 200 800; font-display: swap; }
-@font-face { font-family: "Asap Condensed"; src: url("/fonts/AsapCondensed-SemiBold.ttf") format("truetype"); font-style: normal; font-weight: 600; font-display: swap; }
 
-:root { color-scheme: dark; --gp-font: "Oxanium", sans-serif; --gp-subheading: "Asap Condensed", sans-serif; }
+:root { color-scheme: dark; --gp-font: "Oxanium", sans-serif; --gp-title: "Cyberform", sans-serif; --gp-subheading: var(--gp-font); font-synthesis: none; }
 * { box-sizing: border-box; }
 body { margin: 0; background: #080808; color: #ededed; font: 16px/1.6 var(--gp-font); }
 main { max-width: 1080px; margin: 0 auto; padding: 36px 20px 80px; }
-h1 { font-size: 2rem; font-weight: 750; margin: 0; text-shadow: 0 0 14px #ff68cd88, 0 0 32px #ab3ecb44; }
-h2 { font: 600 1.4rem/1.4 var(--gp-subheading); margin-bottom: 16px; text-shadow: 0 0 14px #ff68cd66; }
-h3 { font-family: var(--gp-subheading); font-weight: 600; margin: 16px 0 8px; text-shadow: 0 0 12px #ff68cd55; }
+h1 { font: 400 2rem/1.25 var(--gp-title); margin: 0; text-shadow: 0 0 14px #ff68cd88, 0 0 32px #ab3ecb44; }
+h2 { font: 400 1.4rem/1.4 var(--gp-title); margin-bottom: 16px; text-shadow: 0 0 14px #ff68cd66; }
+h3 { font-family: var(--gp-title); font-weight: 400; margin: 16px 0 8px; text-shadow: 0 0 12px #ff68cd55; }
 p { margin: 8px 0; }
 section, .panel { border: 1px solid #353535; padding: 20px; margin-top: 24px; border-radius: 8px; }
 label { display: block; margin: 12px 0 6px; }
@@ -27,7 +27,7 @@ button.secondary { background: #151515; color: #eee; border-color: #777; }
 .warning { color: #f4d38b; }
 .success { color: #a3e8b4; }
 .check { display: flex; align-items: flex-start; gap: 10px; }
-code, pre { font-family: ui-monospace, monospace; font-size: .88rem; }
+code, pre { font-family: var(--gp-font); font-size: .88rem; }
 pre { background: #111; border: 1px solid #333; padding: 14px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 30rem; }
 ul, ol { padding-left: 24px; }
 li { margin: 8px 0; }

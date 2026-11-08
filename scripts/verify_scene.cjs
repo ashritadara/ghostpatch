@@ -116,17 +116,24 @@ assert.ok(api.progress > .17 && api.progress < .37, "Arrow travel interpolates b
 assert.equal(sent.at(-1).data.chapter, 1);
 assert.ok(Number.parseFloat(shell.style.translate.split(" ")[1]) < 0, "The outgoing interface travels up when advancing down");
 assert.equal(shell.style.opacity, "1", "Vertical travel moves the page rather than fading it away");
+const robot=node("analysis-robot"),robotY=()=>Number(robot.style.transform.match(/translate3d\(0,(-?[\d.]+)px,0\)/)[1]);
+const robotEnteringY=robotY();
+assert.equal(robot.style.visibility,"visible");
+assert.ok(robotEnteringY<0,"The replacement robot enters analysis from above while the outgoing UI moves up");
 assert.equal(node("photo-background").style.transform, "translate3d(0,0,0)", "Photos crossfade without sliding past each other");
 assert.ok(Number(node("background-transition-shade").style.opacity) > 0, "A dark magenta blend masks the middle-page picture seams");
 assert.equal(node("photo-background-next").dataset.chapter, "2");
 for (let i = 0; i < 35; i++) tick();
 assert.ok(Number.parseFloat(shell.style.translate.split(" ")[1]) > 0, "The next interface enters from below");
+assert.ok(robotY()>robotEnteringY&&robotY()<0,"The robot descends smoothly toward its resting position");
 flush();
 assert.equal(api.chapter, 2);
 assert.equal(sent.at(-1).data.chapter, 2);
 assert.ok(clock - beforeMotion >= 1550, "Arrow travel has a deliberate duration");
 assert.equal(api.isAnimating, false);
 assert.equal(shell.style.translate, "0 0.00px");
+assert.equal(robotY(),0,"The replacement robot rests in place after arrival");
+assert.equal(robot.style.opacity,"1");
 assert.equal(node("photo-background-next").style.opacity, "0", "The extra background layer is hidden after arrival");
 assert.equal(node("background-transition-shade").style.opacity, "0");
 receive({ type: "inspector", open: true });
@@ -136,6 +143,14 @@ receive({ type: "inspector", open: "false" });
 assert.equal(node("viewport").dataset.inspectorOpen, "true", "Only validated inspector messages affect layout");
 receive({ type: "inspector", open: false });
 assert.equal(node("viewport").dataset.inspectorOpen, "false");
+api.goToChapter(3); tick();
+for(let i=0;i<20;i++)tick();
+assert.ok(robotY()>0,"The robot leaves analysis downward as the interface moves up");
+assert.ok(Number.parseFloat(shell.style.translate.split(" ")[1])<0);
+flush();
+assert.equal(robot.style.visibility,"hidden","The replacement robot is absent from the plan page");
+api.goToChapter(2); flush();
+assert.equal(robotY(),0,"Reverse navigation returns the robot without accumulating transforms");
 const beforeJump = sent.length, jumpStart = window.scrollY;
 api.goToChapter(5); tick();
 for (let i = 0; i < 20; i++) tick();
@@ -171,12 +186,14 @@ assert.equal(api.chapter, 2);
 assert.equal(sourceAssignments, 1, "Navigation fixes must not reload or reset the backend interface");
 assert.ok(html.includes('title="GhostPatch real backend workflow"'));
 assert.ok(html.includes('id="workspace-retry"'));
+assert.ok(html.includes('id="analysis-robot" src="data:image/png;base64,'),"The transparent asset is embedded for standalone compatibility");
+assert.ok(!source.includes('function sentinel('),"The old polygon robot has been removed");
 // Exercise the real draw function with a recording renderer: the foreground
 // drone must leave below the canvas before the robot is substantially visible.
 const recorded = [], droneAsset = {};
 const drawing = {
   ctx: new Proxy({}, { get: () => () => {} }), width: 1600, height: 900, dpr: 1, mobile: false,
-  drone: droneAsset, vehicle: {}, sentinel: () => ({}), glow() {}, flare() {}, skyline() {}, alley() {},
+  drone: droneAsset, vehicle: {}, glow() {}, flare() {}, skyline() {}, alley() {},
   model(asset, x, y, scale, rotation, alpha) { recorded.push({ asset, x, y, scale, alpha }); return () => [0, 0]; },
 };
 const helperSource = source.slice(source.indexOf("  const clamp="), source.indexOf("  const poly="));

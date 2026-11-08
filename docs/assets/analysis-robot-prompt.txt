@@ -1,0 +1,4 @@
+Built-in imagegen, background-extraction.
+Edit target: user-supplied Neon Armored Soldier Aiming Rifle.png.
+Remove only the dark background and floor/shadow. Preserve the character, pose, full head-to-toe silhouette, rifle, dark purple armor, pink visor and neon edge lighting. No redesign, added objects or text. Keep the character and rifle opaque, with genuine alpha transparency around the silhouette.
+Output: frontend/public/ghostpatch-analysis-robot.png
